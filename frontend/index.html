@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Amber — Liquid staking on BOT Chain</title>
+<link rel="icon" type="image/png" href="./logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0c0a09;--panel:#1c1917;--panel-2:#292524;--accent:#f59e0b;--accent-soft:#fbbf24;--accent-mid:#d97706;--text:#fafaf9;--muted:#a8a29e;--hairline:rgba(250,250,249,.1)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;line-height:1.5;min-height:100vh;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+.mono{font-family:'Courier New',monospace}
+body::before{content:"";position:fixed;top:-260px;left:50%;transform:translateX(-50%);width:900px;height:600px;background:radial-gradient(ellipse,rgba(245,158,11,.14) 0%,transparent 65%);pointer-events:none}
+nav{position:relative;z-index:5}
+.nav-inner{max-width:920px;margin:0 auto;padding:26px 24px;display:flex;align-items:center;justify-content:space-between}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;letter-spacing:.02em}
+.logo-mark{width:22px;height:22px;border:2.5px solid var(--accent);border-radius:50%;position:relative}
+.logo-mark::after{content:"";position:absolute;inset:5px;background:var(--accent);border-radius:50%}
+.nav-links{display:flex;align-items:center;gap:24px;font-size:14px;color:var(--muted)}
+.nav-links a:hover{color:var(--text)}
+.btn{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px;padding:11px 20px;border-radius:999px;border:none;cursor:pointer;min-height:42px;transition:all .18s}
+.btn-primary{background:var(--accent);color:#0c0a09}
+.btn-primary:hover{background:var(--accent-soft);transform:translateY(-1px)}
+.btn-ghost{background:transparent;color:var(--text);border:1px solid var(--hairline)}
+.btn-ghost:hover{border-color:var(--accent)}
+select#netSel{background:var(--panel);border:1px solid var(--hairline);border-radius:999px;font-family:'Courier New',monospace;font-size:12px;padding:9px 12px;min-height:42px;color:var(--text)}
+.shell{max-width:640px;margin:0 auto;padding:0 24px 80px;position:relative;z-index:2}
+.hero{text-align:center;padding:64px 0 40px}
+.hero .eyebrow{font-family:'Courier New',monospace;font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--accent);margin-bottom:18px}
+.hero .giant{font-size:clamp(76px,15vw,124px);font-weight:700;line-height:.95;letter-spacing:-.04em;color:var(--text)}
+.hero .giant span{color:var(--accent)}
+.hero .sub{color:var(--muted);font-size:17px;margin-top:18px}
+.widget{background:var(--panel);border:1px solid rgba(250,250,249,.14);border-radius:24px;padding:32px;box-shadow:0 24px 60px rgba(0,0,0,.45);margin-bottom:22px}
+.widget h3{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:14px}
+.field-row{display:flex;gap:10px;margin-bottom:18px}
+.field-row input{flex:1;background:var(--bg);border:1px solid var(--hairline);border-radius:14px;color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:600;padding:16px 18px;min-height:58px}
+.field-row input:focus{outline:2px solid var(--accent);outline-offset:0}
+.field-row .btn{min-height:58px;padding:0 26px;font-size:15px;white-space:nowrap}
+.mini-rows{border-top:1px solid var(--hairline);padding-top:14px}
+.mini{display:flex;justify-content:space-between;font-size:14px;padding:7px 0;color:var(--muted)}
+.mini b{color:var(--text);font-family:'Courier New',monospace}
+.divider{display:flex;align-items:center;gap:14px;margin:26px 0 22px;color:var(--muted);font-size:12px;letter-spacing:.18em;text-transform:uppercase}
+.divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--hairline)}
+.stats{display:flex;justify-content:center;gap:0;margin:34px 0 10px;border-top:1px solid var(--hairline);border-bottom:1px solid var(--hairline)}
+.stat{text-align:center;padding:20px 26px;border-right:1px solid var(--hairline)}
+.stat:last-child{border-right:none}
+.stat .val{font-size:26px;font-weight:700;color:var(--accent)}
+.stat .lbl{font-family:'Courier New',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:5px}
+.rewards{text-align:center;background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(245,158,11,.04));border:1px solid rgba(245,158,11,.35);border-radius:24px;padding:28px;margin:34px 0}
+.rewards .amt{font-size:34px;font-weight:700;color:var(--accent-soft);font-family:'Courier New',monospace}
+.rewards .cap{font-size:13px;color:var(--muted);margin:6px 0 18px}
+.timeline{position:relative;padding:38px 0 10px;margin-top:34px;border-top:1px solid var(--hairline)}
+.timeline::before{content:"";position:absolute;left:50%;top:52px;bottom:18px;width:1px;background:var(--hairline)}
+.tl-step{position:relative;width:50%;padding:10px 34px 30px;text-align:right}
+.tl-step:nth-child(even){margin-left:50%;text-align:left}
+.tl-step::after{content:"";position:absolute;top:16px;width:11px;height:11px;border-radius:50%;background:var(--bg);border:2.5px solid var(--accent)}
+.tl-step:nth-child(odd)::after{right:-6px}
+.tl-step:nth-child(even)::after{left:-6px}
+.tl-step h4{font-size:15px;margin-bottom:4px}
+.tl-step p{font-size:13px;color:var(--muted)}
+.tl-step .k{font-family:'Courier New',monospace;font-size:11px;color:var(--accent);letter-spacing:.1em}
+footer{border-top:1px solid var(--hairline);padding:36px 0;text-align:center;color:var(--muted);font-size:13px}
+.proof{margin-top:20px;padding:16px 18px;background:var(--panel);border:1px solid var(--hairline);border-radius:16px;max-width:380px;margin-left:auto;margin-right:auto;text-align:left}
+.proof-title{font-family:'Courier New',monospace;font-size:11px;font-weight:600;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px}
+.proof-grid{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-family:'Courier New',monospace;font-size:12px;color:var(--muted)}
+.proof-grid .val{color:var(--accent);overflow-wrap:anywhere}
+.proof-link{display:inline-block;margin-top:10px;font-family:'Courier New',monospace;font-size:11px;color:var(--accent);border-bottom:1px solid var(--accent)}
+</style>
+</head>
+<body>
+<nav><div class="nav-inner">
+<div class="logo"><div class="logo-mark"></div>Amber</div>
+<div class="nav-links">
+<a href="#stake">Stake</a>
+<a href="#rewards">Rewards</a>
+<select id="netSel"><option value="968">Testnet 968</option><option value="677">Mainnet 677</option></select>
+<button class="btn btn-primary" id="connectBtn">Connect wallet</button>
+</div>
+</div></nav>
+
+<div class="shell">
+<div class="hero">
+<div class="eyebrow">Liquid staking on BOT Chain</div>
+<div class="giant"><span>5.00%</span></div>
+<div class="sub">APY on staked BOT — rewards accrue every second, stay liquid the whole time.</div>
+</div>
+
+<div class="widget" id="stake">
+<h3>Stake</h3>
+<div class="field-row"><input id="stakeAmt" type="number" step="0.001" placeholder="1.000"><button class="btn btn-primary" id="stakeBtn">Stake →</button></div>
+<div class="mini-rows">
+<div class="mini"><span>Your staked</span><b id="yourStake">—</b></div>
+<div class="mini"><span>Your stBOT (tradable)</span><b id="yourStToken">—</b></div>
+</div>
+<div class="divider">or</div>
+<h3>Unstake</h3>
+<div class="field-row"><input id="unstakeAmt" type="number" step="0.001" placeholder="0.500"><button class="btn btn-ghost" id="unstakeBtn">Request →</button></div>
+<div class="mini-rows">
+<div class="mini"><span>Pending unstake</span><b id="pendingUnstake">—</b></div>
+<div class="mini"><span>Available in</span><b id="unstakeTimer">—</b></div>
+</div>
+</div>
+
+<div class="stats">
+<div class="stat"><div class="val" id="statTVL">—</div><div class="lbl">Total staked</div></div>
+<div class="stat"><div class="val" id="statAPY">5%</div><div class="lbl">Staking APY</div></div>
+<div class="stat"><div class="val" id="statStakers">—</div><div class="lbl">Stakers</div></div>
+</div>
+
+<div class="rewards" id="rewards">
+<div class="amt" id="pendingRewards">—</div>
+<div class="cap">Pending rewards — claim anytime, no waiting period.</div>
+<button class="btn btn-primary" id="claimBtn">Claim rewards →</button>
+</div>
+
+<div class="timeline">
+<div class="tl-step"><div class="k">STEP 01</div><h4>Stake BOT</h4><p>Deposit BOT and receive stBOT instantly.</p></div>
+<div class="tl-step"><div class="k">STEP 02</div><h4>Earn yield</h4><p>5% APY accrues block by block — nothing to claim manually.</p></div>
+<div class="tl-step"><div class="k">STEP 03</div><h4>Trade stBOT</h4><p>Keep it liquid — stBOT stays tradable while it earns.</p></div>
+<div class="tl-step"><div class="k">STEP 04</div><h4>Unstake</h4><p>Request exit, wait 2 days, get your BOT back.</p></div>
+</div>
+</div>
+
+<footer>
+<div class="wrap">
+<p>Amber — liquid staking on BOT Chain. Stake, earn, stay liquid.</p>
+<div class="proof">
+<div class="proof-title">Proof on BOT Mainnet</div>
+<div class="proof-grid">
+<span>Chain ID</span><span class="val">677</span>
+<span>Contract</span><span class="val" id="contractAddr">—</span>
+</div>
+<a href="https://botchain.ai" target="_blank" rel="noopener" class="proof-link">BOT Chain Website ↗</a>
+</div>
+</div>
+</footer>
+<script type="importmap">
+{"imports":{"ethers":"https://esm.sh/ethers@6.13.2","@reown/appkit":"https://esm.sh/@reown/appkit@1.8.21","@reown/appkit-adapter-ethers":"https://esm.sh/@reown/appkit-adapter-ethers@1.8.21"}}
+</script>
+<script type="module" src="app.js"></script>
+</body>
+</html>
