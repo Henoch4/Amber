@@ -163,6 +163,7 @@ const ERC20_ABI = [
   'function allowance(address,address) view returns (uint256)',
   'function approve(address,uint256) returns (bool)',
   'function balanceOf(address) view returns (uint256)',
+  'function deposit() payable',
 ];
 const fmtBot = (v) => {
   const n = Number(ethers.formatEther(v));
@@ -198,15 +199,17 @@ async function refreshReads() {
     $('statTVL').textContent = fmtBot(ts);
     $('statStakers').textContent = String(stakers);
     if (account) {
-      const [st, stBal, pu, pr, acc] = await Promise.all([
+      const [st, stBal, pu, pr, acc, wb] = await Promise.all([
         c.staked(account),
         new ethers.Contract(ST_TOKEN, ERC20_ABI, readProvider).balanceOf(account),
         c.getPendingUnstake(account),
         c.pendingRewards(account),
         c.lastRewardAccrual(account),
+        new ethers.Contract(WBOT, ERC20_ABI, readProvider).balanceOf(account),
       ]);
       $('yourStake').textContent = fmtBot(st);
       $('yourStToken').textContent = fmtBot(stBal) + ' stBOT';
+      if ($('yourWbot')) $('yourWbot').textContent = fmtBot(wb);
       const amt = pu[0], at = Number(pu[1]);
       $('pendingUnstake').textContent = amt > 0n ? fmtBot(amt) : 'none';
       if (amt > 0n) {
@@ -224,6 +227,7 @@ async function refreshReads() {
     } else {
       $('yourStake').textContent = 'connect wallet';
       $('yourStToken').textContent = 'connect wallet';
+      if ($('yourWbot')) $('yourWbot').textContent = 'connect wallet';
       $('pendingUnstake').textContent = '—';
       $('unstakeTimer').textContent = '—';
       $('pendingRewards').textContent = '—';
@@ -237,29 +241,55 @@ async function requireWallet() {
   return !!(ok && signer && account);
 }
 
-async function approveIfNeeded(amount) {
+async function approveIfNeeded(amount, status) {
   const t = new ethers.Contract(WBOT, ERC20_ABI, signer);
   const a = await t.allowance(account, CONTRACT_ADDR);
   if (a < amount) {
+    if (status) status('Approving WBOT…');
     const tx = await t.approve(CONTRACT_ADDR, ethers.MaxUint256, GAS);
     await tx.wait();
   }
 }
 
-async function runTx(btn, label, fn) {
+async function ensureWbot(amount, status) {
+  const t = new ethers.Contract(WBOT, ERC20_ABI, signer);
+  const bal = await t.balanceOf(account);
+  if (bal >= amount) return;
+  const shortfall = amount - bal;
+  const native = await signer.provider.getBalance(account);
+  const gasCost = ethers.parseEther('0.007'); // deposit + approve + stake @ 20 gwei
+  if (native < shortfall + gasCost) {
+    const need = fmtBot(shortfall + gasCost - native);
+    throw new Error(native < shortfall
+      ? `Need ${need} more BOT (wrap + gas)`
+      : `Need ${need} more BOT for gas`);
+  }
+  if (status) status('Wrapping BOT…');
+  const tx = await t.deposit({ value: shortfall, ...GAS });
+  await tx.wait();
+}
+
+async function runTx(btn, label, fn, errMap) {
   if (!(await requireWallet())) return;
   const old = btn.textContent;
   btn.disabled = true;
   btn.textContent = 'Confirm in wallet…';
   try {
-    const tx = await fn();
+    const tx = await fn((m) => { btn.textContent = m; });
     btn.textContent = 'Pending…';
     await tx.wait();
     btn.textContent = '✓ ' + label;
     await refreshReads();
   } catch (e) {
     console.error('[Amber]', label, e);
-    btn.textContent = '✗ ' + String(e.shortMessage || e.reason || e.message || 'failed').slice(0, 50);
+    const raw = String(e.shortMessage || e.reason || e.message || 'failed');
+    let msg = raw.replace(/^execution reverted:\s*/i, '').slice(0, 60);
+    if (errMap) {
+      for (const [re, out] of errMap) {
+        if (re.test(raw)) { msg = out; break; }
+      }
+    }
+    btn.textContent = '✗ ' + msg;
   }
   setTimeout(() => { btn.textContent = old; btn.disabled = false; }, 3500);
 }
@@ -288,10 +318,11 @@ document.addEventListener('DOMContentLoaded', () => {
   stakeBtn.addEventListener('click', () => {
     const amt = parseAmt($('stakeAmt'));
     if (!amt) { amtGuard(stakeBtn, 'Enter amount'); return; }
-    runTx(stakeBtn, 'Staked', async () => {
-      await approveIfNeeded(amt);
+    runTx(stakeBtn, 'Staked', async (status) => {
+      await ensureWbot(amt, status);
+      await approveIfNeeded(amt, status);
       return amberRead().connect(signer).stake(amt, GAS);
-    });
+    }, [[/insufficient balance/i, 'Not enough WBOT to stake']]);
   });
   unstakeBtn.addEventListener('click', () => {
     const amt = parseAmt($('unstakeAmt'));
