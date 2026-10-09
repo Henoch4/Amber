@@ -24,7 +24,7 @@ const modal = createAppKit({
   networks: [botTestnet, botMainnet],
   defaultNetwork: botMainnet,
   projectId: PROJECT_ID,
-  metadata: { name: 'Amber', description: 'Liquid staking on BOT Chain', url: 'https://amber.botchain.io', icons: ['https://amber.botchain.io/logo.png'] },
+  metadata: { name: 'Amber', description: 'Liquid staking on BOT Chain', url: location.origin, icons: [location.origin + '/logo.png'] },
   themeVariables: { '--w3m-accent': '#f59e0b' },
   features: { analytics: false },
 });
