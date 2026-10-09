@@ -22,7 +22,7 @@ const botMainnet = {
 const modal = createAppKit({
   adapters: [new EthersAdapter()],
   networks: [botTestnet, botMainnet],
-  defaultNetwork: botTestnet,
+  defaultNetwork: botMainnet,
   projectId: PROJECT_ID,
   metadata: { name: 'Amber', description: 'Liquid staking on BOT Chain', url: 'https://amber.botchain.io', icons: ['https://amber.botchain.io/logo.png'] },
   themeVariables: { '--w3m-accent': '#f59e0b' },
@@ -53,6 +53,7 @@ async function syncFromProvider(wp) {
   account = await signer.getAddress();
   $('connectBtn').textContent = account.slice(0, 6) + '...' + account.slice(-4);
   console.log('[Amber] Wallet connected:', account);
+  if (typeof refreshReads === 'function') refreshReads();
 }
 
 function updateConnectedUI() {
@@ -137,4 +138,172 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (e) {}
   }, 800);
+});
+
+// ---- mainnet contract (BOT Chain 677) ----
+const WBOT = '0xD5452816194a3784dBa983426cCe7c122F4abd30';
+const CONTRACT_ADDR = '0xbCBaA567ab5554aF115397DE6Eb97fbD2DE79AA2';
+const ST_TOKEN = '0x7E3a4415D7FAB391CB15cCAC08a972F293141485';
+const DEPLOY_BLOCK = 26069086;
+const UNSTAKE_DELAY = 2 * 86400;
+const GAS = { gasPrice: ethers.parseUnits('20', 'gwei') };
+const readProvider = new ethers.JsonRpcProvider('https://rpc.botchain.ai');
+const AMBER_ABI = [
+  'function totalStaked() view returns (uint256)',
+  'function staked(address) view returns (uint256)',
+  'function pendingRewards(address) view returns (uint256)',
+  'function lastRewardAccrual(address) view returns (uint256)',
+  'function getPendingUnstake(address) view returns (uint256,uint256)',
+  'function stake(uint256)',
+  'function requestUnstake(uint256)',
+  'function claimUnstake()',
+  'function claimReward()',
+];
+const ERC20_ABI = [
+  'function allowance(address,address) view returns (uint256)',
+  'function approve(address,uint256) returns (bool)',
+  'function balanceOf(address) view returns (uint256)',
+];
+const fmtBot = (v) => {
+  const n = Number(ethers.formatEther(v));
+  if (n === 0) return '0 BOT';
+  if (n >= 10000) return Math.round(n).toLocaleString() + ' BOT';
+  if (n >= 1) return n.toFixed(3) + ' BOT';
+  return n.toFixed(5) + ' BOT';
+};
+const fmtDur = (s) => {
+  if (s <= 0) return 'ready';
+  const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
+  if (d > 0) return d + 'd ' + h + 'h';
+  if (h > 0) return h + 'h ' + m + 'm';
+  return m + 'm';
+};
+
+function amberRead() { return new ethers.Contract(CONTRACT_ADDR, AMBER_ABI, readProvider); }
+
+let stakersCache = null;
+async function countStakers() {
+  if (stakersCache !== null) return stakersCache;
+  try {
+    const evs = await amberRead().queryFilter(amberRead().interface.getEvent('Stake'), DEPLOY_BLOCK);
+    stakersCache = new Set(evs.map((e) => e.args[0])).size;
+  } catch { stakersCache = 0; }
+  return stakersCache;
+}
+
+async function refreshReads() {
+  try {
+    const c = amberRead();
+    const [ts, stakers] = await Promise.all([c.totalStaked(), countStakers()]);
+    $('statTVL').textContent = fmtBot(ts);
+    $('statStakers').textContent = String(stakers);
+    if (account) {
+      const [st, stBal, pu, pr, acc] = await Promise.all([
+        c.staked(account),
+        new ethers.Contract(ST_TOKEN, ERC20_ABI, readProvider).balanceOf(account),
+        c.getPendingUnstake(account),
+        c.pendingRewards(account),
+        c.lastRewardAccrual(account),
+      ]);
+      $('yourStake').textContent = fmtBot(st);
+      $('yourStToken').textContent = fmtBot(stBal) + ' stBOT';
+      const amt = pu[0], at = Number(pu[1]);
+      $('pendingUnstake').textContent = amt > 0n ? fmtBot(amt) : 'none';
+      if (amt > 0n) {
+        const left = at + UNSTAKE_DELAY - Math.floor(Date.now() / 1000);
+        $('unstakeTimer').textContent = left <= 0 ? 'ready to claim' : fmtDur(left);
+      } else {
+        $('unstakeTimer').textContent = '—';
+      }
+      let rewards = pr;
+      if (acc > 0n && st > 0n) {
+        const elapsed = BigInt(Math.floor(Date.now() / 1000) - Number(acc));
+        rewards += (st * 5n * elapsed) / 100n / 31536000n;
+      }
+      $('pendingRewards').textContent = fmtBot(rewards);
+    } else {
+      $('yourStake').textContent = 'connect wallet';
+      $('yourStToken').textContent = 'connect wallet';
+      $('pendingUnstake').textContent = '—';
+      $('unstakeTimer').textContent = '—';
+      $('pendingRewards').textContent = '—';
+    }
+  } catch (e) { console.error('[Amber] reads failed', e); }
+}
+
+async function requireWallet() {
+  if (signer && account) return true;
+  const ok = await connect();
+  return !!(ok && signer && account);
+}
+
+async function approveIfNeeded(amount) {
+  const t = new ethers.Contract(WBOT, ERC20_ABI, signer);
+  const a = await t.allowance(account, CONTRACT_ADDR);
+  if (a < amount) {
+    const tx = await t.approve(CONTRACT_ADDR, ethers.MaxUint256, GAS);
+    await tx.wait();
+  }
+}
+
+async function runTx(btn, label, fn) {
+  if (!(await requireWallet())) return;
+  const old = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Confirm in wallet…';
+  try {
+    const tx = await fn();
+    btn.textContent = 'Pending…';
+    await tx.wait();
+    btn.textContent = '✓ ' + label;
+    await refreshReads();
+  } catch (e) {
+    console.error('[Amber]', label, e);
+    btn.textContent = '✗ ' + String(e.shortMessage || e.reason || e.message || 'failed').slice(0, 50);
+  }
+  setTimeout(() => { btn.textContent = old; btn.disabled = false; }, 3500);
+}
+
+function parseAmt(input) {
+  try {
+    const v = ethers.parseUnits((input.value || '').trim() || '0', 18);
+    return v > 0n ? v : null;
+  } catch { return null; }
+}
+
+function amtGuard(btn, text) {
+  btn.textContent = text;
+  setTimeout(() => { btn.textContent = btn.dataset.label || btn.textContent; }, 1500);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  $('contractAddr').textContent = CONTRACT_ADDR;
+  refreshReads();
+  setInterval(refreshReads, 30000);
+
+  const wire = (id) => { const b = $(id); b.dataset.label = b.textContent; return b; };
+  const stakeBtn = wire('stakeBtn'), unstakeBtn = wire('unstakeBtn'), claimBtn = wire('claimBtn');
+  const claimUnstakeBtn = $('claimUnstakeBtn') ? wire('claimUnstakeBtn') : null;
+
+  stakeBtn.addEventListener('click', () => {
+    const amt = parseAmt($('stakeAmt'));
+    if (!amt) { amtGuard(stakeBtn, 'Enter amount'); return; }
+    runTx(stakeBtn, 'Staked', async () => {
+      await approveIfNeeded(amt);
+      return amberRead().connect(signer).stake(amt, GAS);
+    });
+  });
+  unstakeBtn.addEventListener('click', () => {
+    const amt = parseAmt($('unstakeAmt'));
+    if (!amt) { amtGuard(unstakeBtn, 'Enter amount'); return; }
+    runTx(unstakeBtn, 'Requested', () => amberRead().connect(signer).requestUnstake(amt, GAS));
+  });
+  claimBtn.addEventListener('click', () => {
+    runTx(claimBtn, 'Claimed', () => amberRead().connect(signer).claimReward(GAS));
+  });
+  if (claimUnstakeBtn) {
+    claimUnstakeBtn.addEventListener('click', () => {
+      runTx(claimUnstakeBtn, 'Claimed', () => amberRead().connect(signer).claimUnstake(GAS));
+    });
+  }
 });

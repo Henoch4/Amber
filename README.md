@@ -8,7 +8,7 @@ Unstake with a transparent 2-day cooldown — request, wait, claim.
 - Mainnet — chainId 677 — RPC https://rpc.botchain.ai — explorer https://scan.botchain.ai
 
 ## Deployments
-- Mainnet (677): pending — contract compiled (solc 0.8.30, OpenZeppelin 5.6.1, optimized), deploy queued.
+- Mainnet (677): **deployed** — `0xbCBaA567ab5554aF115397DE6Eb97fbD2DE79AA2` (stBOT `0x7E3a4415D7FAB391CB15cCAC08a972F293141485`; block 26069086, tx `0x6bea18d2cd0f9f040cfb7ec7643fdd1445d88db673d3f6a6403fe4994c680e02`, 20 gwei, gasUsed 1430982, 2026-10-09). Frontend wired and defaults to mainnet.
 - Constructor: WBOT `0xD5452816194a3784dBa983426cCe7c122F4abd30`. The contract deploys its own stBOT token (`Staked BOT` / `stBOT`) at construction.
 
 ## Structure

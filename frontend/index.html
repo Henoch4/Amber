@@ -77,7 +77,7 @@ footer{border-top:1px solid var(--hairline);padding:36px 0;text-align:center;col
 <div class="nav-links">
 <a href="#stake">Stake</a>
 <a href="#rewards">Rewards</a>
-<select id="netSel"><option value="968">Testnet 968</option><option value="677">Mainnet 677</option></select>
+<select id="netSel"><option value="968">Testnet 968</option><option value="677" selected>Mainnet 677</option></select>
 <button class="btn btn-primary" id="connectBtn">Connect wallet</button>
 </div>
 </div></nav>
@@ -102,6 +102,7 @@ footer{border-top:1px solid var(--hairline);padding:36px 0;text-align:center;col
 <div class="mini-rows">
 <div class="mini"><span>Pending unstake</span><b id="pendingUnstake">—</b></div>
 <div class="mini"><span>Available in</span><b id="unstakeTimer">—</b></div>
+<button class="btn btn-ghost" id="claimUnstakeBtn" style="width:100%;margin-top:10px">Claim unstake →</button>
 </div>
 </div>
 
