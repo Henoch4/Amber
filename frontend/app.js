@@ -21,7 +21,7 @@ const botMainnet = {
 
 const modal = createAppKit({
   adapters: [new EthersAdapter()],
-  networks: [botTestnet, botMainnet],
+  networks: [botMainnet, botTestnet],
   defaultNetwork: botMainnet,
   projectId: PROJECT_ID,
   metadata: { name: 'Amber', description: 'Liquid staking on BOT Chain', url: location.origin, icons: [location.origin + '/logo.png'] },
