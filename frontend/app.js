@@ -142,9 +142,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ---- mainnet contract (BOT Chain 677) ----
 const WBOT = '0xD5452816194a3784dBa983426cCe7c122F4abd30';
-const CONTRACT_ADDR = '0xbCBaA567ab5554aF115397DE6Eb97fbD2DE79AA2';
-const ST_TOKEN = '0x7E3a4415D7FAB391CB15cCAC08a972F293141485';
-const DEPLOY_BLOCK = 26069086;
+const CONTRACT_ADDR = '0x80F28748BDc3Cb5AC9e7C028f6Aa7626431E2Ba1';
+const ST_TOKEN = '0xf8198dfFFbC8CE67C5748985F210aA659385b4ac';
+const DEPLOY_BLOCK = 26145522;
 const UNSTAKE_DELAY = 2 * 86400;
 const GAS = { gasPrice: ethers.parseUnits('20', 'gwei') };
 const readProvider = new ethers.JsonRpcProvider('https://rpc.botchain.ai');
@@ -152,6 +152,9 @@ const AMBER_ABI = [
   'function totalStaked() view returns (uint256)',
   'function staked(address) view returns (uint256)',
   'function pendingRewards(address) view returns (uint256)',
+  'function earned(address) view returns (uint256)',
+  'function rewardPool() view returns (uint256)',
+  'function fundRewards(uint256)',
   'function lastRewardAccrual(address) view returns (uint256)',
   'function getPendingUnstake(address) view returns (uint256,uint256)',
   'function stake(uint256)',
@@ -199,12 +202,12 @@ async function refreshReads() {
     $('statTVL').textContent = fmtBot(ts);
     $('statStakers').textContent = String(stakers);
     if (account) {
-      const [st, stBal, pu, pr, acc, wb] = await Promise.all([
+      const [st, stBal, pu, earned, pool, wb] = await Promise.all([
         c.staked(account),
         new ethers.Contract(ST_TOKEN, ERC20_ABI, readProvider).balanceOf(account),
         c.getPendingUnstake(account),
-        c.pendingRewards(account),
-        c.lastRewardAccrual(account),
+        c.earned(account),
+        c.rewardPool(),
         new ethers.Contract(WBOT, ERC20_ABI, readProvider).balanceOf(account),
       ]);
       $('yourStake').textContent = fmtBot(st);
@@ -218,12 +221,8 @@ async function refreshReads() {
       } else {
         $('unstakeTimer').textContent = '—';
       }
-      let rewards = pr;
-      if (acc > 0n && st > 0n) {
-        const elapsed = BigInt(Math.floor(Date.now() / 1000) - Number(acc));
-        rewards += (st * 5n * elapsed) / 100n / 31536000n;
-      }
-      $('pendingRewards').textContent = fmtBot(rewards);
+      $('pendingRewards').textContent = fmtBot(earned);
+      if ($('rewardPool')) $('rewardPool').textContent = fmtBot(pool);
     } else {
       $('yourStake').textContent = 'connect wallet';
       $('yourStToken').textContent = 'connect wallet';
@@ -231,6 +230,7 @@ async function refreshReads() {
       $('pendingUnstake').textContent = '—';
       $('unstakeTimer').textContent = '—';
       $('pendingRewards').textContent = '—';
+      if ($('rewardPool')) $('rewardPool').textContent = '—';
     }
   } catch (e) { console.error('[Amber] reads failed', e); }
 }
@@ -332,6 +332,17 @@ document.addEventListener('DOMContentLoaded', () => {
   claimBtn.addEventListener('click', () => {
     runTx(claimBtn, 'Claimed', () => amberRead().connect(signer).claimReward(GAS));
   });
+  const fundBtn = $('fundBtn') ? wire('fundBtn') : null;
+  if (fundBtn) {
+    fundBtn.addEventListener('click', () => {
+      const amt = parseAmt($('fundAmt'));
+      if (!amt) { amtGuard(fundBtn, 'Enter amount'); return; }
+      runTx(fundBtn, 'Funded', async () => {
+        await approveIfNeeded(amt);
+        return amberRead().connect(signer).fundRewards(amt, GAS);
+      });
+    });
+  }
   if (claimUnstakeBtn) {
     claimUnstakeBtn.addEventListener('click', () => {
       runTx(claimUnstakeBtn, 'Claimed', () => amberRead().connect(signer).claimUnstake(GAS));

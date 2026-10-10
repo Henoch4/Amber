@@ -116,13 +116,15 @@ footer{border-top:1px solid var(--hairline);padding:36px 0;text-align:center;col
 
 <div class="rewards" id="rewards">
 <div class="amt" id="pendingRewards">—</div>
+<div class="mini-rows"><div class="mini"><span>Reward pool (funded)</span><b id="rewardPool">—</b></div></div>
 <div class="cap">Pending rewards — claim anytime, no waiting period.</div>
 <button class="btn btn-primary" id="claimBtn">Claim rewards →</button>
+<div class="field-row" style="margin-top:10px"><input id="fundAmt" type="number" step="0.001" placeholder="0.100"><button class="btn btn-ghost" id="fundBtn">Fund pool →</button></div>
 </div>
 
 <div class="timeline">
 <div class="tl-step"><div class="k">STEP 01</div><h4>Stake BOT</h4><p>Deposit BOT and receive stBOT instantly.</p></div>
-<div class="tl-step"><div class="k">STEP 02</div><h4>Earn yield</h4><p>5% APY accrues block by block — nothing to claim manually.</p></div>
+<div class="tl-step"><div class="k">STEP 02</div><h4>Earn yield</h4><p>5% APY accrues block by block — claim anytime while the funded pool lasts.</p></div>
 <div class="tl-step"><div class="k">STEP 03</div><h4>Trade stBOT</h4><p>Keep it liquid — stBOT stays tradable while it earns.</p></div>
 <div class="tl-step"><div class="k">STEP 04</div><h4>Unstake</h4><p>Request exit, wait 2 days, get your BOT back.</p></div>
 </div>
@@ -135,7 +137,7 @@ footer{border-top:1px solid var(--hairline);padding:36px 0;text-align:center;col
 <div class="proof-title">Proof on BOT Mainnet</div>
 <div class="proof-grid">
 <span>Chain ID</span><span class="val">677</span>
-<span>Contract</span><span class="val" id="contractAddr">0xbCBaA567ab5554aF115397DE6Eb97fbD2DE79AA2</span>
+<span>Contract</span><span class="val" id="contractAddr">0x80F28748BDc3Cb5AC9e7C028f6Aa7626431E2Ba1</span>
 </div>
 <a href="https://botchain.ai" target="_blank" rel="noopener" class="proof-link">BOT Chain Website ↗</a>
 <a href="https://scan.botchain.ai/" target="_blank" rel="noopener" class="proof-link" style="margin-left:14px">BOTScan Explorer ↗</a>
