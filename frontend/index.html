@@ -146,6 +146,22 @@ function contracts() {
 }
 const short = (a) => (a ? a.slice(0, 6) + '…' + a.slice(-4) : '—');
 
+function getProvider() {
+  try {
+    if (typeof appkit !== 'undefined' && appkit && typeof appkit.getWalletProvider === 'function') {
+      const p = appkit.getWalletProvider('eip155') || appkit.getWalletProvider();
+      if (p) return p;
+    }
+  } catch (e) {}
+  return null;
+}
+async function getSigner() {
+  const wp = getProvider();
+  if (!wp) { try { appkit.open(); } catch (e) {} return null; }
+  return new ethers.BrowserProvider(wp).getSigner();
+}
+
+
 function initAppKit() {
   const adapter = new EthersAdapter();
   appkit = new AppKit({
@@ -217,7 +233,7 @@ let last = performance.now(), t0 = last;
 })(last);
 
 async function ensureWbot(amount) {
-  const s = await appkit.getSigner();
+  const s = await getSigner(); if (!s) return;;
   const c = CHAINS[currentChainId];
   const t = new ethers.Contract(c.wbot, ERC20_ABI, s);
   const me = await s.getAddress();
@@ -262,7 +278,7 @@ $("#go").onclick = async () => {
   if (!account) { appkit.open(); return; }
   try {
     const c = CHAINS[currentChainId];
-    const s = await appkit.getSigner();
+    const s = await getSigner(); if (!s) return;;
     const me = await s.getAddress();
     const am = new ethers.Contract(c.am, AMBER_ABI, s);
     if (mode) {
@@ -285,7 +301,7 @@ $("#claim").onclick = async () => {
   if (!account) { appkit.open(); return; }
   try {
     const c = CHAINS[currentChainId];
-    const s = await appkit.getSigner();
+    const s = await getSigner(); if (!s) return;;
     const am = new ethers.Contract(c.am, AMBER_ABI, s);
     const er = await am.earned(me0());
     if (er <= 0n) return toast("No rewards yet");
