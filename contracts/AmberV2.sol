@@ -124,6 +124,7 @@ contract AmberV2 is ReentrancyGuard, Ownable {
         require(staked[msg.sender] >= amount, "Insufficient stake");
         _accrue(msg.sender);
         staked[msg.sender] -= amount;
+        totalStaked -= amount;
         unstakeRequestTime[msg.sender] = block.timestamp;
         unstakeAmount[msg.sender] = amount;
         totalPendingUnstake += amount;
